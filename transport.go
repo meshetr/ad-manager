@@ -120,7 +120,7 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 			"mikrostoritve": ["http://34.122.104.118/api/v1/ads", "http://35.238.213.222:8080/api/v1/photos"],
 			"github": ["https://github.com/meshetr/ad-catalogue", "https://github.com/meshetr/ad-manager"],
 			"travis": [],
-			"dockerhub": ["https://hub.docker.com/repository/docker/meshetr/ad-catalogue", "https://hub.docker.com/repository/docker/meshetr/ad-manager"]
+			"dockerhub": ["https://hub.docker.com/r/meshetr/ad-catalogue", "https://hub.docker.com/r/meshetr/ad-manager"]
 		}`, "\n", ""), "\t", ""))
 	})
 
