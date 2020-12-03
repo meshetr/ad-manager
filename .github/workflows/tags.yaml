@@ -51,3 +51,12 @@ jobs:
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
+
+      - name: Install kubectl
+        run: sudo apt-get install kubectl -y
+
+      - name: Deploy to Kubernetes
+        run: kubectl apply -f ./k8s/ad-manager.yaml
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
