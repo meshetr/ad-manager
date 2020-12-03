@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strings"
 )
 
 var (
@@ -67,6 +69,47 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 		encodeResponse,
 		options...,
 	))
+
+	// dummy GET
+	router.Methods("GET").Path("/photos").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		fmt.Fprint(w, strings.ReplaceAll(strings.ReplaceAll(`{
+				"photos": [
+				{
+					"id": "f25466e93d75ee96b158c35a09c322407bc0558b",
+					"ad_id": "44a30972af64d2614b5ae0e54962d08c",
+					"url_small": "https://live.staticflickr.com/4676/25690386427_8c2b3eaf76_m.jpg",
+					"url_medium": "https://live.staticflickr.com/4676/25690386427_8c2b3eaf76.jpg",
+					"url_large": "https://live.staticflickr.com/4676/25690386427_8c2b3eaf76_b.jpg",
+					"url_original": "https://live.staticflickr.com/4676/25690386427_7ef979d9ab_k.jpg"
+				},
+				{
+					"id": "2c5a6769509e0b47033d37356e4f871786b3d2a0",
+					"ad_id": "614b5ae0e54962d08c44a30972af64d2",
+					"url_small": "https://live.staticflickr.com/1327/560380352_5353d7b089_m.jpg",
+					"url_medium": "https://live.staticflickr.com/1327/560380352_5353d7b089.jpg",
+					"url_large": "https://live.staticflickr.com/1327/560380352_5353d7b089_b.jpg",
+					"url_original": "https://live.staticflickr.com/1327/560380352_5353d7b089_b.jpg"
+				},
+				{
+					"id": "6f3b3970f50ffdeacf9c65d0f75b9820b8331732",
+					"ad_id": "2af64d2614b5ae0e54962d044a30978c",
+					"url_small": "https://live.staticflickr.com/4756/39484446525_a77d8db7bf_m.jpg",
+					"url_medium": "https://live.staticflickr.com/4756/39484446525_a77d8db7bf.jpg",
+					"url_large": "https://live.staticflickr.com/4756/39484446525_a77d8db7bf_b.jpg",
+					"url_original": "https://live.staticflickr.com/4756/39484446525_a77d8db7bf_b.jpg"
+				},
+				{
+					"id": "c58bc6f3fdb97101a066060f6327fb8569d7740c",
+					"ad_id": "44a30972af64d2614b5ae0e54962d08c",
+					"url_small": "https://live.staticflickr.com/1384/5110231975_41ce19ef23_m.jpg",
+					"url_medium": "https://live.staticflickr.com/1384/5110231975_41ce19ef23.jpg",
+					"url_large": "https://live.staticflickr.com/1384/5110231975_41ce19ef23_b.jpg",
+					"url_original": "https://live.staticflickr.com/1384/5110231975_41ce19ef23_b.jpg"
+				}
+			]
+		}`, "\n", ""), "\t", ""))
+	})
 
 	return router
 }
