@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ad-manager-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ad-manager
+  template:
+    metadata:
+      labels:
+        app: ad-manager
+    spec:
+      containers:
+        - image: meshetr/ad-manager:v0.2-beta
+          name: ad-manager
+          ports:
+            - containerPort: 8080
+              name: server
+              protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ad-manager-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: server
+  selector:
+    app: ad-manager
