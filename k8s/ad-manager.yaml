@@ -13,7 +13,7 @@ spec:
         app: ad-manager
     spec:
       containers:
-        - image: meshetr/ad-manager:v0.2-beta
+        - image: meshetr/ad-manager:v0.2
           name: ad-manager
           ports:
             - containerPort: 8080
