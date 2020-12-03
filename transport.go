@@ -111,6 +111,19 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 		}`, "\n", ""), "\t", ""))
 	})
 
+	// GET info
+	router.Methods("GET").Path("/info").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		fmt.Fprint(w, strings.ReplaceAll(strings.ReplaceAll(`{
+			"clani": ["ag4332", "zh5129"],
+			"opis_projekta": "Najin projekt implementira aplikacijo za objavo oglasov.",
+			"mikrostoritve": ["http://34.122.104.118/api/v1/ads", "http://35.238.213.222:8080/api/v1/photos"],
+			"github": ["https://github.com/meshetr/ad-catalogue", "https://github.com/meshetr/ad-manager"],
+			"travis": [],
+			"dockerhub": ["https://hub.docker.com/repository/docker/meshetr/ad-catalogue", "https://hub.docker.com/repository/docker/meshetr/ad-manager"]
+		}`, "\n", ""), "\t", ""))
+	})
+
 	return router
 }
 
