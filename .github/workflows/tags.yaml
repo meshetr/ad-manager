@@ -63,7 +63,7 @@ jobs:
       run: |
         echo "$KUBECONFIG_STRING" > "$KUBECONFIG"
         echo "$GOOGLE_APPLICATION_CREDENTIALS_STRING" > "$GOOGLE_APPLICATION_CREDENTIALS"
-        kubectl apply -f ./k8s/ad-manager.yaml
+        kubectl config view # apply -f ./k8s/ad-manager.yaml
       env:
         GOOGLE_APPLICATION_CREDENTIALS_STRING: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
         GOOGLE_APPLICATION_CREDENTIALS: google_app_creds.json
