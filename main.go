@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +14,8 @@ import (
 func main() {
 	var (
 		httpAddr = ":8080"
+		dsn      = "host=localhost user=dbuser password=verisikret dbname=meshetr port=5432 sslmode=disable TimeZone=Europe/Belgrade"
+		db, _    = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	)
 
 	var logger log.Logger
@@ -23,7 +27,7 @@ func main() {
 
 	var service Service
 	{
-		service = MakeService()
+		service = MakeService(db)
 		//service = LoggingMiddleware(logger)(service)
 	}
 

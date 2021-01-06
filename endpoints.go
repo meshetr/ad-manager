@@ -37,8 +37,8 @@ func MakeEndpoints(service Service) Endpoints {
 func MakePostAdEndpoint(service Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postAdRequest)
-		err := service.PostAd(ctx, req.Ad)
-		return postAdResponse{Err: err}, nil
+		id, err := service.PostAd(ctx, req.Ad)
+		return postAdResponse{Err: err, ID: id}, nil
 	}
 }
 
@@ -94,6 +94,7 @@ type postAdRequest struct {
 }
 type postAdResponse struct {
 	Err error `json:"err,omitempty"`
+	ID  uint  `json:"id,omitempty"`
 }
 
 func (r postAdResponse) error() error {
@@ -112,7 +113,7 @@ func (r putAdResponse) error() error {
 }
 
 type deleteAdRequest struct {
-	ID string
+	ID uint
 }
 type deleteAdResponse struct {
 	Err error `json:"err,omitempty"`

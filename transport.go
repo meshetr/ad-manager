@@ -10,6 +10,7 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -145,8 +146,9 @@ func decodePutAdRequest(ctx context.Context, requestIn *http.Request) (interface
 
 func decodeDeleteAdRequest(ctx context.Context, requestIn *http.Request) (interface{}, error) {
 	vars := mux.Vars(requestIn)
-	id, ok := vars["id"]
-	if !ok {
+	id_int, _ := strconv.Atoi(vars["id"])
+	id := uint(id_int)
+	if id == 0 {
 		return nil, ErrBadRouting
 	}
 	requestOut := deleteAdRequest{ID: id}
@@ -209,7 +211,7 @@ func httpErrCode(err error) int {
 	switch err {
 	case ErrNotFound:
 		return http.StatusNotFound
-	case ErrAlreadyExists, ErrInconsistentIDs:
+	case ErrAlreadyExists, ErrInconsistentIDs, ErrMissingFields, ErrBadRouting:
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
