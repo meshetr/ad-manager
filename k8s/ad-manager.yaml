@@ -13,7 +13,7 @@ spec:
         app: ad-manager
     spec:
       containers:
-        - image: meshetr/ad-manager:v0.6-beta2
+        - image: meshetr/ad-manager:v0.6-beta3
           name: ad-manager
           ports:
             - containerPort: 8080
@@ -50,7 +50,7 @@ spec:
                 secretKeyRef:
                   name: database
                   key: timezone
-            - name: DB_Name
+            - name: DB_NAME
               valueFrom:
                 secretKeyRef:
                   name: database
