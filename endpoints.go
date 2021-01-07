@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
+	"mime/multipart"
 )
 
 // Endpoints collects all of the endpoints that compose a profile service. It's
@@ -37,8 +38,8 @@ func MakeEndpoints(service Service) Endpoints {
 func MakePostAdEndpoint(service Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postAdRequest)
-		err := service.PostAd(ctx, req.Ad)
-		return postAdResponse{Err: err}, nil
+		id, err := service.PostAd(ctx, req.Ad)
+		return postAdResponse{Err: err, ID: id}, nil
 	}
 }
 
@@ -61,15 +62,15 @@ func MakeDeleteAdEndpoint(service Service) endpoint.Endpoint {
 func MakePostPhotoEndpoint(service Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postPhotoRequest)
-		err := service.PostPhoto(ctx, req.Photo)
-		return postPhotoResponse{Err: err}, nil
+		url, err := service.PostPhoto(ctx, req.AdID, req.File)
+		return postPhotoResponse{Url: url, Err: err}, nil
 	}
 }
 
 func MakeDeletePhotoEndpoint(service Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(deletePhotoRequest)
-		err := service.DeletePhoto(ctx, req.ID)
+		err := service.DeletePhoto(ctx, req.AdID, req.ID)
 		return deletePhotoResponse{Err: err}, nil
 	}
 }
@@ -94,6 +95,7 @@ type postAdRequest struct {
 }
 type postAdResponse struct {
 	Err error `json:"err,omitempty"`
+	ID  uint  `json:"id,omitempty"`
 }
 
 func (r postAdResponse) error() error {
@@ -112,7 +114,7 @@ func (r putAdResponse) error() error {
 }
 
 type deleteAdRequest struct {
-	ID string
+	ID uint
 }
 type deleteAdResponse struct {
 	Err error `json:"err,omitempty"`
@@ -123,10 +125,12 @@ func (r deleteAdResponse) error() error {
 }
 
 type postPhotoRequest struct {
-	Photo Photo
+	AdID uint
+	File multipart.File
 }
 type postPhotoResponse struct {
-	Err error `json:"err,omitempty"`
+	Url string `json:"url"`
+	Err error  `json:"err,omitempty"`
 }
 
 func (r postPhotoResponse) error() error {
@@ -134,7 +138,8 @@ func (r postPhotoResponse) error() error {
 }
 
 type deletePhotoRequest struct {
-	ID string
+	AdID uint
+	ID   uint
 }
 type deletePhotoResponse struct {
 	Err error `json:"err,omitempty"`
