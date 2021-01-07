@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/spf13/viper"
+	"google.golang.org/api/option"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"net/http"
@@ -14,10 +16,17 @@ import (
 )
 
 func main() {
+	viper.AutomaticEnv()
 	var (
 		httpAddr = ":8080"
-		dsn      = "host=localhost user=dbuser password=verisikret dbname=meshetr port=5432 sslmode=disable TimeZone=Europe/Belgrade"
-		db, _    = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		dsn      = "host=" + viper.GetString("DB_HOST") +
+			" user=" + viper.GetString("DB_USER") +
+			" password=" + viper.GetString("DB_PASS") +
+			" dbname=" + viper.GetString("DB_NAME") +
+			" port=" + viper.GetString("DB_PORT") +
+			" sslmode=" + viper.GetString("DB_SSL") +
+			" TimeZone=" + viper.GetString("DB_TIMEZONE")
+		db, _ = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	)
 
 	var logger log.Logger
@@ -28,7 +37,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	storageClient, err := storage.NewClient(ctx)
+	storageClient, err := storage.NewClient(ctx, option.WithCredentialsJSON([]byte(viper.GetString("GCP_CLIENT_SECRET"))))
 	if err != nil {
 		logger.Log("storage.NewClient: %v", err)
 	} else {

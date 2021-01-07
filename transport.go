@@ -214,7 +214,7 @@ func encodeResponse(ctx context.Context, responseWriter http.ResponseWriter, res
 	return json.NewEncoder(responseWriter).Encode(response)
 }
 
-func encodeError(_ context.Context, err error, responseWriter http.ResponseWriter) {
+func encodeError(ctx context.Context, err error, responseWriter http.ResponseWriter) {
 	if err == nil {
 		panic("encodeError with nil error")
 	}
