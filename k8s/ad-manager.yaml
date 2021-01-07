@@ -19,6 +19,47 @@ spec:
             - containerPort: 8080
               name: server
               protocol: TCP
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: database
+                  key: host
+            - name: DB_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: database
+                    key: user
+            - name: DB_PASS
+                valueFrom:
+                  secretKeyRef:
+                    name: database
+                    key: password
+            - name: DB_PORT
+                valueFrom:
+                  secretKeyRef:
+                    name: database
+                    key: port
+            - name: DB_SSL
+                valueFrom:
+                  secretKeyRef:
+                    name: database
+                    key: ssl
+            - name: DB_TIMEZONE
+                valueFrom:
+                  secretKeyRef:
+                    name: database
+                    key: timezone
+            - name: DB_Name
+                valueFrom:
+                  secretKeyRef:
+                    name: database
+                    key: name
+            - name: GCP_CLIENT_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: google-storage-client
+                    key: credentials-json
 
 ---
 
