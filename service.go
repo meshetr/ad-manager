@@ -40,7 +40,6 @@ type Ad struct {
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	Price       float32   `json:"price"`
-	Photos      []Photo   `json:"photos,omitempty" gorm:"foreignKey:IdPhoto"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
