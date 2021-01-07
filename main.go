@@ -35,7 +35,7 @@ func main() {
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
-	fmt.Println(viper.GetString("GCP_CLIENT_SECRET"))
+
 	ctx := context.Background()
 	storageClient, err := storage.NewClient(ctx, option.WithCredentialsJSON([]byte(viper.GetString("GCP_CLIENT_SECRET"))))
 	if err != nil {
