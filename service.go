@@ -71,7 +71,8 @@ func (s adService) PostAd(ctx context.Context, ad Ad) (uint, error) {
 	ad.IdAd = 0
 	if ad.IdUser == "" ||
 		ad.Description == "" ||
-		ad.Title == "" {
+		ad.Title == "" ||
+		ad.Price == 0 {
 		return 0, ErrMissingFields
 	}
 	result := s.db.Create(&ad)
@@ -80,9 +81,7 @@ func (s adService) PostAd(ctx context.Context, ad Ad) (uint, error) {
 
 func (s adService) PutAd(ctx context.Context, ad Ad) error {
 	ad.IdUser = ""
-	if ad.IdAd == 0 ||
-		ad.Description == "" ||
-		ad.Title == "" {
+	if ad.IdAd == 0 {
 		return ErrMissingFields
 	}
 	result := s.db.Model(&ad).Updates(ad)
