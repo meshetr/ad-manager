@@ -35,18 +35,29 @@ type adService struct {
 }
 
 type Ad struct {
-	ID          uint    `json:"id"`
-	UserId      string  `json:"user_id"`
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	Photos      []Photo `json:"photos,omitempty"`
+	IdAd        uint      `json:"id_ad" gorm:"primaryKey"`
+	IdUser      string    `json:"id_user"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Price       float32   `json:"price"`
+	Photos      []Photo   `json:"photos,omitempty" gorm:"foreignKey:IdPhoto"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (Ad) TableName() string {
+	return "t_ad"
 }
 
 type Photo struct {
-	ID          uint   `json:"id"`
-	AdID        uint   `json:"ad_id"`
-	Ad          Ad     `json:"-"`
+	IdPhoto     uint   `json:"id" gorm:"primaryKey"`
+	IdAd        uint   `json:"id_ad"`
+	Ad          Ad     `json:"-" gorm:"foreignKey:IdAd"`
 	UrlOriginal string `json:"url_original"`
+}
+
+func (Photo) TableName() string {
+	return "t_photo"
 }
 
 func MakeService(db *gorm.DB, storageClient *storage.Client) Service {
@@ -58,19 +69,19 @@ func MakeService(db *gorm.DB, storageClient *storage.Client) Service {
 }
 
 func (s adService) PostAd(ctx context.Context, ad Ad) (uint, error) {
-	ad.ID = 0
-	if ad.UserId == "" ||
+	ad.IdAd = 0
+	if ad.IdUser == "" ||
 		ad.Description == "" ||
 		ad.Title == "" {
 		return 0, ErrMissingFields
 	}
 	result := s.db.Create(&ad)
-	return ad.ID, result.Error
+	return ad.IdAd, result.Error
 }
 
 func (s adService) PutAd(ctx context.Context, ad Ad) error {
-	ad.UserId = ""
-	if ad.ID == 0 ||
+	ad.IdUser = ""
+	if ad.IdAd == 0 ||
 		ad.Description == "" ||
 		ad.Title == "" {
 		return ErrMissingFields
@@ -108,12 +119,12 @@ func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File
 		return "", err
 	}
 
-	result := s.db.Create(&Photo{AdID: adId, UrlOriginal: url})
+	result := s.db.Create(&Photo{IdAd: adId, UrlOriginal: url})
 	return url, result.Error
 }
 
 func (s adService) DeletePhoto(ctx context.Context, adId uint, id uint) error {
-	result := s.db.Delete(&Photo{ID: id, AdID: adId})
+	result := s.db.Delete(&Photo{IdPhoto: id, IdAd: adId})
 	if result.RowsAffected < 1 {
 		return ErrNotFound
 	}
