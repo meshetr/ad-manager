@@ -25,7 +25,7 @@ type Service interface {
 	PutAd(ctx context.Context, ad Ad) error
 	DeleteAd(ctx context.Context, id uint) error
 	// Photo methods
-	PostPhoto(ctx context.Context, adId uint, file multipart.File) (string, error)
+	PostPhoto(ctx context.Context, adId uint, file multipart.File) (*Photo, error)
 	DeletePhoto(ctx context.Context, adId uint, id uint) error
 }
 
@@ -100,7 +100,7 @@ func (s adService) DeleteAd(ctx context.Context, id uint) error {
 	return result.Error
 }
 
-func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File) (string, error) {
+func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File) (*Photo, error) {
 	defer file.Close()
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
@@ -112,14 +112,15 @@ func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File
 	url := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, objectName)
 	writer := s.storageClient.Bucket(bucketName).Object(objectName).NewWriter(ctx)
 	if _, err := io.Copy(writer, file); err != nil {
-		return "", ErrUpload
+		return nil, ErrUpload
 	}
 	if err := writer.Close(); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	result := s.db.Create(&Photo{IdAd: adId, UrlOriginal: url})
-	return url, result.Error
+	photo := Photo{IdAd: adId, UrlOriginal: url}
+	result := s.db.Create(&photo)
+	return &photo, result.Error
 }
 
 func (s adService) DeletePhoto(ctx context.Context, adId uint, id uint) error {
