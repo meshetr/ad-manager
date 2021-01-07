@@ -62,8 +62,8 @@ func MakeDeleteAdEndpoint(service Service) endpoint.Endpoint {
 func MakePostPhotoEndpoint(service Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postPhotoRequest)
-		url, err := service.PostPhoto(ctx, req.AdID, req.File)
-		return postPhotoResponse{Url: url, Err: err}, nil
+		photo, err := service.PostPhoto(ctx, req.AdID, req.File)
+		return postPhotoResponse{IdPhoto: photo.IdPhoto, Url: photo.UrlOriginal, Err: err}, nil
 	}
 }
 
@@ -129,8 +129,9 @@ type postPhotoRequest struct {
 	File multipart.File
 }
 type postPhotoResponse struct {
-	Url string `json:"url"`
-	Err error  `json:"err,omitempty"`
+	IdPhoto uint   `json:"id_photo"`
+	Url     string `json:"url"`
+	Err     error  `json:"err,omitempty"`
 }
 
 func (r postPhotoResponse) error() error {
