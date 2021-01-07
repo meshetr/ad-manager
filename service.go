@@ -1,9 +1,14 @@
 package main
 
 import (
+	"cloud.google.com/go/storage"
 	"context"
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
+	"io"
+	"mime/multipart"
+	"time"
 )
 
 var (
@@ -11,6 +16,7 @@ var (
 	ErrAlreadyExists   = errors.New("already exists")
 	ErrNotFound        = errors.New("not found")
 	ErrMissingFields   = errors.New("missing fields")
+	ErrUpload          = errors.New("upload failed")
 )
 
 type Service interface {
@@ -19,12 +25,13 @@ type Service interface {
 	PutAd(ctx context.Context, ad Ad) error
 	DeleteAd(ctx context.Context, id uint) error
 	// Photo methods
-	PostPhoto(ctx context.Context, photo Photo) error
-	DeletePhoto(ctx context.Context, id string) error
+	PostPhoto(ctx context.Context, adId uint, file multipart.File) (string, error)
+	DeletePhoto(ctx context.Context, adId uint, id uint) error
 }
 
 type adService struct {
-	db *gorm.DB
+	db            *gorm.DB
+	storageClient *storage.Client
 }
 
 type Ad struct {
@@ -42,10 +49,11 @@ type Photo struct {
 	UrlOriginal string `json:"url_original"`
 }
 
-func MakeService(db *gorm.DB) Service {
+func MakeService(db *gorm.DB, storageClient *storage.Client) Service {
 	db.AutoMigrate(&Ad{}, &Photo{})
 	return &adService{
-		db: db,
+		db:            db,
+		storageClient: storageClient,
 	}
 }
 
@@ -82,12 +90,32 @@ func (s adService) DeleteAd(ctx context.Context, id uint) error {
 	return result.Error
 }
 
-func (s adService) PostPhoto(ctx context.Context, photo Photo) error {
-	// TODO
-	return nil
+func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File) (string, error) {
+	defer file.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+	defer cancel()
+
+	// Upload an object with storage.Writer.
+	bucketName := "meshetr-images"
+	objectName := fmt.Sprintf("%d-%d", adId, time.Now().UnixNano())
+	url := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, objectName)
+	writer := s.storageClient.Bucket(bucketName).Object(objectName).NewWriter(ctx)
+	if _, err := io.Copy(writer, file); err != nil {
+		return "", ErrUpload
+	}
+	if err := writer.Close(); err != nil {
+		return "", err
+	}
+
+	result := s.db.Create(&Photo{AdID: adId, UrlOriginal: url})
+	return url, result.Error
 }
 
-func (s adService) DeletePhoto(ctx context.Context, id string) error {
-	// TODO
-	return nil
+func (s adService) DeletePhoto(ctx context.Context, adId uint, id uint) error {
+	result := s.db.Delete(&Photo{ID: id, AdID: adId})
+	if result.RowsAffected < 1 {
+		return ErrNotFound
+	}
+	return result.Error
 }

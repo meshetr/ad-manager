@@ -1,6 +1,8 @@
 package main
 
 import (
+	"cloud.google.com/go/storage"
+	"context"
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"gorm.io/driver/postgres"
@@ -25,9 +27,17 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
+	ctx := context.Background()
+	storageClient, err := storage.NewClient(ctx)
+	if err != nil {
+		logger.Log("storage.NewClient: %v", err)
+	} else {
+		defer storageClient.Close()
+	}
+
 	var service Service
 	{
-		service = MakeService(db)
+		service = MakeService(db, storageClient)
 		//service = LoggingMiddleware(logger)(service)
 	}
 

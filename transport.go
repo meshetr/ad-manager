@@ -57,14 +57,14 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 		options...,
 	))
 
-	router.Methods("POST").Path("/photo").Handler(httptransport.NewServer(
+	router.Methods("POST").Path("/ad/{id}/photo").Handler(httptransport.NewServer(
 		endpoints.PostPhotoEndpoint,
 		decodePostPhotoRequest,
 		encodeResponse,
 		options...,
 	))
 
-	router.Methods("DELETE").Path("/photo/{id}").Handler(httptransport.NewServer(
+	router.Methods("DELETE").Path("/ad/{ad-id}/photo/{id}").Handler(httptransport.NewServer(
 		endpoints.DeletePhotoEndpoint,
 		decodeDeletePhotoRequest,
 		encodeResponse,
@@ -146,8 +146,8 @@ func decodePutAdRequest(ctx context.Context, requestIn *http.Request) (interface
 
 func decodeDeleteAdRequest(ctx context.Context, requestIn *http.Request) (interface{}, error) {
 	vars := mux.Vars(requestIn)
-	id_int, _ := strconv.Atoi(vars["id"])
-	id := uint(id_int)
+	idInt, _ := strconv.Atoi(vars["id"])
+	id := uint(idInt)
 	if id == 0 {
 		return nil, ErrBadRouting
 	}
@@ -156,20 +156,38 @@ func decodeDeleteAdRequest(ctx context.Context, requestIn *http.Request) (interf
 }
 
 func decodePostPhotoRequest(ctx context.Context, requestIn *http.Request) (interface{}, error) {
-	var requestOut postPhotoRequest
-	if e := json.NewDecoder(requestIn.Body).Decode(&requestOut.Photo); e != nil {
-		return nil, e
+	vars := mux.Vars(requestIn)
+	idInt, _ := strconv.Atoi(vars["id"])
+	id := uint(idInt)
+	if id == 0 {
+		return nil, ErrBadRouting
 	}
-	return requestOut, nil
+
+	defer requestIn.Body.Close()
+	file, _, err := requestIn.FormFile("photo")
+	if err != nil {
+		return nil, ErrMissingFields
+	}
+
+	return postPhotoRequest{
+		AdID: id,
+		File: file,
+	}, nil
 }
 
 func decodeDeletePhotoRequest(ctx context.Context, requestIn *http.Request) (interface{}, error) {
 	vars := mux.Vars(requestIn)
-	id, ok := vars["id"]
-	if !ok {
+	adIdInt, _ := strconv.Atoi(vars["ad-id"])
+	adId := uint(adIdInt)
+	if adId == 0 {
 		return nil, ErrBadRouting
 	}
-	requestOut := deletePhotoRequest{ID: id}
+	idInt, _ := strconv.Atoi(vars["id"])
+	id := uint(idInt)
+	if id == 0 {
+		return nil, ErrBadRouting
+	}
+	requestOut := deletePhotoRequest{AdID: adId, ID: id}
 	return requestOut, nil
 }
 
