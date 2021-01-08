@@ -7,6 +7,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
@@ -78,8 +79,7 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 	router.Methods("GET").Path("/readiness").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-
-	return router
+	return handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}), handlers.AllowedOrigins([]string{"*"}))(router)
 }
 
 func decodePostAdRequest(ctx context.Context, requestIn *http.Request) (interface{}, error) {

@@ -13,7 +13,7 @@ spec:
         app: ad-manager
     spec:
       containers:
-        - image: meshetr/ad-manager:v0.8-beta3
+        - image: meshetr/ad-manager:v0.8-beta4
           name: ad-manager
           ports:
             - containerPort: 8080
@@ -21,13 +21,13 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /api/v1/liveness
+              path: /manager/api/v1/liveness
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 3
           readinessProbe:
             httpGet:
-              path: /api/v1/readiness
+              path: /manager/api/v1/readiness
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 3
