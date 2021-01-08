@@ -80,8 +80,8 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 		w.WriteHeader(http.StatusOK)
 	})
 	return handlers.CORS(
-		handlers.AllowedHeaders([]string{"*"}),
-		handlers.AllowedMethods([]string{"*"}),
+		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "Accept", "Origin"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}),
 		handlers.AllowedOrigins([]string{"*"}))(router)
 }
 
