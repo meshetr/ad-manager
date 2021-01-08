@@ -13,7 +13,7 @@ spec:
         app: ad-manager
     spec:
       containers:
-        - image: meshetr/ad-manager:v0.8-beta2
+        - image: meshetr/ad-manager:v0.8-beta3
           name: ad-manager
           ports:
             - containerPort: 8080
@@ -80,7 +80,7 @@ kind: Service
 metadata:
   name: ad-manager-service
 spec:
-  type: LoadBalancer
+  type: NodePort
   ports:
     - port: 8080
       protocol: TCP

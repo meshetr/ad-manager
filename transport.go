@@ -19,7 +19,7 @@ var (
 )
 
 func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
-	router := mux.NewRouter().PathPrefix("/api/v1").Subrouter()
+	router := mux.NewRouter().PathPrefix("/manager/api/v1").Subrouter()
 	endpoints := MakeEndpoints(s)
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
