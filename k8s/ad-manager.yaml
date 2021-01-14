@@ -13,7 +13,7 @@ spec:
         app: ad-manager
     spec:
       containers:
-        - image: meshetr/ad-manager:v0.9-beta2
+        - image: meshetr/ad-manager:v0.9-beta3
           name: ad-manager
           ports:
             - containerPort: 8080
@@ -72,6 +72,8 @@ spec:
                 secretKeyRef:
                   name: google-storage-client
                   key: credentials-json
+            - name: IMAGE_PROCESSOR_URL
+              value: "image-processor-service:50051"
 
 ---
 

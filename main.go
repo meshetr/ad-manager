@@ -48,7 +48,7 @@ func main() {
 
 	opts = append(opts, grpc.WithInsecure())
 	opts = append(opts, grpc.WithBlock())
-	conn, err := grpc.Dial("image-processor-service:50051", opts...)
+	conn, err := grpc.Dial(viper.GetString("IMAGE_PROCESSOR_URL"), opts...)
 	if err != nil {
 		logger.Log("gRPC: fail to dial: %v", err)
 	} else {
