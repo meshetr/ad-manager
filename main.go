@@ -7,6 +7,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"net/http"
@@ -27,6 +28,7 @@ func main() {
 			" sslmode=" + viper.GetString("DB_SSL") +
 			" TimeZone=" + viper.GetString("DB_TIMEZONE")
 		db, _ = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		opts  []grpc.DialOption
 	)
 
 	var logger log.Logger
@@ -44,9 +46,18 @@ func main() {
 		defer storageClient.Close()
 	}
 
+	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithBlock())
+	conn, err := grpc.Dial("image-processor-service:50051", opts...)
+	if err != nil {
+		logger.Log("gRPC: fail to dial: %v", err)
+	} else {
+		defer conn.Close()
+	}
+
 	var service Service
 	{
-		service = MakeService(db, storageClient)
+		service = MakeService(db, storageClient, conn)
 		//service = LoggingMiddleware(logger)(service)
 	}
 

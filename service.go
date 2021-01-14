@@ -1,10 +1,12 @@
 package main
 
 import (
+	"ad-manager/pb"
 	"cloud.google.com/go/storage"
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc"
 	"gorm.io/gorm"
 	"io"
 	"mime/multipart"
@@ -32,6 +34,7 @@ type Service interface {
 type adService struct {
 	db            *gorm.DB
 	storageClient *storage.Client
+	grpcConn      *grpc.ClientConn
 }
 
 type Ad struct {
@@ -59,11 +62,12 @@ func (Photo) TableName() string {
 	return "t_photo"
 }
 
-func MakeService(db *gorm.DB, storageClient *storage.Client) Service {
+func MakeService(db *gorm.DB, storageClient *storage.Client, grpcConn *grpc.ClientConn) Service {
 	db.AutoMigrate(&Ad{}, &Photo{})
 	return &adService{
 		db:            db,
 		storageClient: storageClient,
+		grpcConn:      grpcConn,
 	}
 }
 
@@ -119,7 +123,22 @@ func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File
 
 	photo := Photo{IdAd: adId, UrlOriginal: url}
 	result := s.db.Create(&photo)
-	return &photo, result.Error
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	client := pb.NewImageProcessorServiceClient(s.grpcConn)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	status, err := client.Process(ctx, &pb.Image{Id: uint32(photo.IdPhoto)})
+	if err != nil {
+		return nil, err
+	}
+	if status.Code != pb.StatusCode_Ok {
+		return nil, errors.New(status.Message)
+	}
+
+	return &photo, nil
 }
 
 func (s adService) DeletePhoto(ctx context.Context, adId uint, id uint) error {

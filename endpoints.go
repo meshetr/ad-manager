@@ -63,6 +63,9 @@ func MakePostPhotoEndpoint(service Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postPhotoRequest)
 		photo, err := service.PostPhoto(ctx, req.AdID, req.File)
+		if err != nil {
+			return postPhotoResponse{Err: err}, nil
+		}
 		return postPhotoResponse{IdPhoto: photo.IdPhoto, Url: photo.UrlOriginal, Err: err}, nil
 	}
 }
