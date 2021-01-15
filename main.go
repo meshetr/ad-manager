@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"net/http"
@@ -27,11 +29,12 @@ func main() {
 			" sslmode=" + viper.GetString("DB_SSL") +
 			" TimeZone=" + viper.GetString("DB_TIMEZONE")
 		db, _ = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		opts  []grpc.DialOption
 	)
 
 	var logger log.Logger
 	{
-		logger = log.NewLogfmtLogger(os.Stderr)
+		logger = log.NewJSONLogger(os.Stdout)
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
@@ -39,20 +42,28 @@ func main() {
 	ctx := context.Background()
 	storageClient, err := storage.NewClient(ctx, option.WithCredentialsJSON([]byte(viper.GetString("GCP_CLIENT_SECRET"))))
 	if err != nil {
-		logger.Log("storage.NewClient: %v", err)
+		level.Error(logger).Log("component", "storage.NewClient", "msg", err)
 	} else {
 		defer storageClient.Close()
 	}
 
+	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithBlock())
+	conn, err := grpc.Dial(viper.GetString("IMAGE_PROCESSOR_URL"), opts...)
+	if err != nil {
+		level.Error(logger).Log("component", "grpc.DIal", "msg", err)
+	} else {
+		defer conn.Close()
+	}
+
 	var service Service
 	{
-		service = MakeService(db, storageClient)
-		//service = LoggingMiddleware(logger)(service)
+		service = MakeService(logger, db, storageClient, conn)
 	}
 
 	var httpHandler http.Handler
 	{
-		httpHandler = MakeHTTPHandler(service, log.With(logger, "component", "HTTP"))
+		httpHandler = MakeHTTPHandler(logger, service)
 	}
 
 	errs := make(chan error)
@@ -63,9 +74,9 @@ func main() {
 	}()
 
 	go func() {
-		logger.Log("transport", "HTTP", "addr", httpAddr)
+		level.Info(logger).Log("component", "HTTPServer", "msg", "Server started successfully!", "context", "port"+httpAddr)
 		errs <- http.ListenAndServe(httpAddr, httpHandler)
 	}()
 
-	logger.Log("exit", <-errs)
+	level.Error(logger).Log("status", "exit", "msg", <-errs)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/handlers"
@@ -19,9 +20,16 @@ var (
 	ErrBadRouting = errors.New("expected URL variable is missing")
 )
 
-func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
+func MakeHTTPHandler(logger log.Logger, s Service) http.Handler {
+	log.With(logger, "component", "HTTPHandler")
 	router := mux.NewRouter().PathPrefix("/manager/api/v1").Subrouter()
 	endpoints := MakeEndpoints(s)
+
+	x := true
+	ready := &x
+	y := true
+	alive := &y
+
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 		httptransport.ServerErrorEncoder(encodeError),
@@ -73,12 +81,33 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 	// health:
 
 	router.Methods("GET").Path("/liveness").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		if *alive {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	})
 
 	router.Methods("GET").Path("/readiness").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if *ready {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	})
+
+	router.Methods("GET").Path("/fakekill").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*alive = false
+		level.Info(logger).Log("component", "HTTPHandler", "msg", "Received /fakekill request. liveness=false")
 		w.WriteHeader(http.StatusOK)
 	})
+
+	router.Methods("GET").Path("/fakeerror").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*ready = false
+		level.Info(logger).Log("component", "HTTPHandler", "msg", "Received /fakeerror request. readiness=false")
+		w.WriteHeader(http.StatusOK)
+	})
+
 	return handlers.CORS(
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "Accept", "Origin"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}),
