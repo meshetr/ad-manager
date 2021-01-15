@@ -10,6 +10,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"gorm.io/gorm"
 	"io"
 	"mime/multipart"
@@ -39,6 +40,7 @@ type adService struct {
 	db            *gorm.DB
 	storageClient *storage.Client
 	grpcConn      *grpc.ClientConn
+	requestId     int64
 }
 
 type Ad struct {
@@ -69,7 +71,7 @@ func (Photo) TableName() string {
 func MakeService(logger log.Logger, db *gorm.DB, storageClient *storage.Client, grpcConn *grpc.ClientConn) Service {
 	db.AutoMigrate(&Ad{}, &Photo{})
 	return &adService{
-		logger:        log.With(logger, "component", "service", "request-id", time.Now().UnixNano()),
+		logger:        log.With(logger, "component", "service"),
 		db:            db,
 		storageClient: storageClient,
 		grpcConn:      grpcConn,
@@ -77,8 +79,10 @@ func MakeService(logger log.Logger, db *gorm.DB, storageClient *storage.Client, 
 }
 
 func (s adService) PostAd(ctx context.Context, ad Ad) (uint, error) {
+	logger := log.With(s.logger, "request-id", time.Now().UnixNano())
+
 	logContext, _ := json.Marshal(ad)
-	level.Info(s.logger).Log("msg", "PostAd request received", "context", logContext)
+	level.Info(logger).Log("msg", "PostAd request received", "context", logContext)
 	ad.IdAd = 0
 	if ad.IdUser == "" ||
 		ad.Description == "" ||
@@ -89,52 +93,59 @@ func (s adService) PostAd(ctx context.Context, ad Ad) (uint, error) {
 	result := s.db.Create(&ad)
 
 	if result.Error != nil {
-		level.Error(s.logger).Log("context", "PostAd", "msg", result.Error)
+		level.Error(logger).Log("context", "PostAd", "msg", result.Error)
 		return 0, result.Error
 	}
 	return ad.IdAd, nil
 }
 
 func (s adService) PutAd(ctx context.Context, ad Ad) error {
+	logger := log.With(s.logger, "request-id", time.Now().UnixNano())
+
 	logContext, _ := json.Marshal(ad)
-	level.Info(s.logger).Log("msg", "PutAd request received", "context", logContext)
+	level.Info(logger).Log("msg", "PutAd request received", "context", logContext)
 
 	ad.IdUser = ""
 	if ad.IdAd == 0 {
-		level.Error(s.logger).Log("context", "PutAd", "msg", ErrMissingFields)
+		level.Error(logger).Log("context", "PutAd", "msg", ErrMissingFields)
 		return ErrMissingFields
 	}
 	result := s.db.Model(&ad).Updates(ad)
 	if result.RowsAffected < 1 {
-		level.Error(s.logger).Log("context", "PutAd", "msg", ErrNotFound)
+		level.Error(logger).Log("context", "PutAd", "msg", ErrNotFound)
 		return ErrNotFound
 	}
 
 	if result.Error != nil {
-		level.Error(s.logger).Log("context", "PutAd", "msg", result.Error)
+		level.Error(logger).Log("context", "PutAd", "msg", result.Error)
 		return result.Error
 	}
 	return nil
 }
 
 func (s adService) DeleteAd(ctx context.Context, id uint) error {
-	level.Info(s.logger).Log("msg", "DeleteAd request received", "context", fmt.Sprintf("\"id\":%d", id))
+	logger := log.With(s.logger, "request-id", time.Now().UnixNano())
+
+	level.Info(logger).Log("msg", "DeleteAd request received", "context", fmt.Sprintf("\"id\":%d", id))
 
 	result := s.db.Delete(&Ad{}, id)
 	if result.RowsAffected < 1 {
-		level.Error(s.logger).Log("context", "DeleteAd", "msg", ErrNotFound)
+		level.Error(logger).Log("context", "DeleteAd", "msg", ErrNotFound)
 		return ErrNotFound
 	}
 
 	if result.Error != nil {
-		level.Error(s.logger).Log("context", "DeleteAd", "msg", result.Error)
+		level.Error(logger).Log("context", "DeleteAd", "msg", result.Error)
 		return result.Error
 	}
 	return nil
 }
 
 func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File) (*Photo, error) {
-	level.Info(s.logger).Log("msg", "PostPhoto request received", "context", fmt.Sprintf("\"id\":%d", adId))
+	requestId := fmt.Sprint(time.Now().UnixNano())
+	logger := log.With(s.logger, "request-id", requestId)
+
+	level.Info(logger).Log("msg", "PostPhoto request received", "context", fmt.Sprintf("\"id\":%d", adId))
 
 	defer file.Close()
 
@@ -147,31 +158,32 @@ func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File
 	url := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, objectName)
 	writer := s.storageClient.Bucket(bucketName).Object(objectName).NewWriter(ctx)
 	if _, err := io.Copy(writer, file); err != nil {
-		level.Error(s.logger).Log("context", "PostPhoto", "msg", ErrUpload)
+		level.Error(logger).Log("context", "PostPhoto", "msg", ErrUpload)
 		return nil, ErrUpload
 	}
 	if err := writer.Close(); err != nil {
-		level.Error(s.logger).Log("context", "PostPhoto", "msg", err)
+		level.Error(logger).Log("context", "PostPhoto", "msg", err)
 		return nil, err
 	}
 
 	photo := Photo{IdAd: adId, UrlOriginal: url}
 	result := s.db.Create(&photo)
 	if result.Error != nil {
-		level.Error(s.logger).Log("context", "PostPhoto", "msg", result.Error)
+		level.Error(logger).Log("context", "PostPhoto", "msg", result.Error)
 		return nil, result.Error
 	}
 
 	client := pb.NewImageProcessorServiceClient(s.grpcConn)
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	ctx = metadata.AppendToOutgoingContext(ctx, "request-id", requestId)
 	defer cancel()
 	status, err := client.Process(ctx, &pb.Image{Id: uint32(photo.IdPhoto)})
 	if err != nil {
-		level.Error(s.logger).Log("context", "PostPhoto", "msg", err)
+		level.Error(logger).Log("context", "PostPhoto", "msg", err)
 		return nil, err
 	}
 	if status.Code != pb.StatusCode_Ok {
-		level.Error(s.logger).Log("context", "PostPhoto", "msg", fmt.Sprintf("Received non 200 response code: %d", status.Code))
+		level.Error(logger).Log("context", "PostPhoto", "msg", fmt.Sprintf("Received non 200 response code: %d", status.Code))
 		return nil, errors.New(status.Message)
 	}
 
@@ -179,15 +191,17 @@ func (s adService) PostPhoto(ctx context.Context, adId uint, file multipart.File
 }
 
 func (s adService) DeletePhoto(ctx context.Context, adId uint, id uint) error {
-	level.Info(s.logger).Log("msg", "DeletePhoto request received", "context", fmt.Sprintf("\"id\":%d", id))
+	logger := log.With(s.logger, "request-id", time.Now().UnixNano())
+
+	level.Info(logger).Log("msg", "DeletePhoto request received", "context", fmt.Sprintf("\"id\":%d", id))
 	result := s.db.Delete(&Photo{IdPhoto: id, IdAd: adId})
 	if result.RowsAffected < 1 {
-		level.Error(s.logger).Log("context", "DeletePhoto", "msg", ErrNotFound)
+		level.Error(logger).Log("context", "DeletePhoto", "msg", ErrNotFound)
 		return ErrNotFound
 	}
 
 	if result.Error != nil {
-		level.Error(s.logger).Log("context", "DeletePhoto", "msg", result.Error)
+		level.Error(logger).Log("context", "DeletePhoto", "msg", result.Error)
 		return result.Error
 	}
 	return nil
