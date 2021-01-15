@@ -27,6 +27,8 @@ func MakeHTTPHandler(logger log.Logger, s Service) http.Handler {
 
 	x := true
 	ready := &x
+	y := true
+	alive := &y
 
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
@@ -79,7 +81,11 @@ func MakeHTTPHandler(logger log.Logger, s Service) http.Handler {
 	// health:
 
 	router.Methods("GET").Path("/liveness").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		if *alive {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	})
 
 	router.Methods("GET").Path("/readiness").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +94,12 @@ func MakeHTTPHandler(logger log.Logger, s Service) http.Handler {
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+	})
+
+	router.Methods("GET").Path("/fakekill").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*alive = false
+		level.Info(logger).Log("component", "HTTPHandler", "msg", "Received /fakekill request. liveness=false")
+		w.WriteHeader(http.StatusOK)
 	})
 
 	router.Methods("GET").Path("/fakeerror").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
